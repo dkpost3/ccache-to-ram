@@ -1,0 +1,10 @@
+[Unit]
+Description=ccache RAM → SSD periodic backup
+After=multi-user.target
+ConditionPathIsMountPoint=/mnt/ccache
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ccache-sync.sh stop
+StandardOutput=journal
+StandardError=journal

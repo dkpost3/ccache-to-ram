@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodic ccache backup (RAM → SSD)
+
+[Timer]
+OnBootSec=15min
+OnCalendar=*:0,30
+Unit=ccache-sync-backup.service
+
+[Install]
+WantedBy=timers.target

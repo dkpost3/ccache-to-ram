@@ -1,0 +1,12 @@
+[Unit]
+Description=ccache sync RAM <-> SSD
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/ccache-sync.sh start
+ExecStop=/usr/local/bin/ccache-sync.sh stop
+
+[Install]
+WantedBy=multi-user.target
