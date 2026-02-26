@@ -199,8 +199,3 @@ For large AOSP trees, moving `ccache` to RAM significantly reduces build
 time bottlenecks caused by SSD I/O latency.
 
 If you build ROMs daily --- this makes a real difference.
-
-------------------------------------------------------------------------
-
-**Author:** dkpost3\
-**License:** MIT (or specify if different)
