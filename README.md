@@ -1,65 +1,76 @@
-# ccache RAM Sync Kit (tmpfs) — AOSP build workstation
+# ccache RAM Sync Kit (tmpfs) --- AOSP build workstation
 
-Этот набор файлов переносит `ccache` в RAM (tmpfs), а также автоматически
-синхронизирует кэш на SSD при старте/выключении и по таймеру.
+This file set moves `ccache` into RAM (tmpfs) and automatically
+synchronizes the cache to SSD on startup/shutdown and periodically via
+timer.
 
-## Состав
-- `scripts/ccache-sync.sh` — основной скрипт (монтирует tmpfs, restore/backup, лимиты).
-- `systemd/ccache-sync.service` — восстановление при старте и сохранение при остановке.
-- `systemd/ccache-sync-backup.service` — ручной/периодический backup RAM→SSD.
-- `systemd/ccache-sync.timer` — периодический backup каждые 30 минут.
-- `profile_snippet.sh` — фрагмент для `~/.profile` с переменными окружения.
+## Contents
 
-## Параметры по умолчанию
-- tmpfs (`SIZE`) = **64G**
-- лимит кэша (`MAX_SIZE`) = **50G**
-- каталоги: RAM `/mnt/ccache`, SSD-бэкап `~/.ccache_backup`
+-   `scripts/ccache-sync.sh` --- main script (mounts tmpfs,
+    restore/backup, limits).
+-   `systemd/ccache-sync.service` --- restore on boot and save on
+    shutdown.
+-   `systemd/ccache-sync-backup.service` --- manual/periodic RAM→SSD
+    backup.
+-   `systemd/ccache-sync.timer` --- periodic backup every 30 minutes.
+-   `profile_snippet.sh` --- snippet for `~/.profile` with environment
+    variables.
 
-## Установка (копипаст)
-```bash
-# 1) распаковать архив
+## Default Parameters
+
+-   tmpfs (`SIZE`) = **64G**
+-   cache limit (`MAX_SIZE`) = **50G**
+-   directories: RAM `/mnt/ccache`, SSD backup `~/.ccache_backup`
+
+## Installation (copy-paste)
+
+``` bash
+# 1) extract the archive
 tar -xzf ccache-ram-sync-kit.tar.gz
 cd ccache-ram-sync-kit
 
-# 2) установить скрипт
+# 2) install the script
 sudo install -m 0755 scripts/ccache-sync.sh /usr/local/bin/ccache-sync.sh
 
-# 3) создать каталоги
+# 3) create directories
 sudo mkdir -p /mnt/ccache
 mkdir -p ~/.ccache_backup
 
-# 4) переменные окружения (добавить в ~/.profile)
+# 4) environment variables (append to ~/.profile)
 cat profile_snippet.sh >> ~/.profile
-# (перелогиниться или source ~/.profile)
+# (log out/in or source ~/.profile)
 
-# 5) установить systemd unit'ы
+# 5) install systemd units
 sudo install -m 0644 systemd/ccache-sync.service /etc/systemd/system/ccache-sync.service
 sudo install -m 0644 systemd/ccache-sync-backup.service /etc/systemd/system/ccache-sync-backup.service
 sudo install -m 0644 systemd/ccache-sync.timer /etc/systemd/system/ccache-sync.timer
 sudo systemctl daemon-reload
 
-# 6) включить сервис и таймер
+# 6) enable service and timer
 sudo systemctl enable --now ccache-sync.service
 sudo systemctl enable --now ccache-sync.timer
 ```
 
-## Проверка
-```bash
+## Verification
+
+``` bash
 mount | grep "on /mnt/ccache type tmpfs"
 ccache -s
 systemctl status ccache-sync.service --no-pager
 systemctl list-timers | grep ccache
 ```
 
-## Обновление настроек (например, USER_NAME, SIZE, MAX_SIZE)
-```bash
-sudoedit /usr/local/bin/ccache-sync.sh     # или sudo nano ...
+## Updating Settings (e.g., USER_NAME, SIZE, MAX_SIZE)
+
+``` bash
+sudoedit /usr/local/bin/ccache-sync.sh     # or sudo nano ...
 sudo systemctl restart ccache-sync.service
 ccache -s
 ```
 
-## Удаление / откат
-```bash
+## Removal / Rollback
+
+``` bash
 sudo systemctl disable --now ccache-sync.timer
 sudo systemctl disable --now ccache-sync.service
 sudo umount /mnt/ccache || true
@@ -67,7 +78,10 @@ sudo rm -f /etc/systemd/system/ccache-sync*.service /etc/systemd/system/ccache-s
 sudo systemctl daemon-reload
 ```
 
-## Примечания
-- В `/etc/fstab` **не** нужно добавлять tmpfs для `/mnt/ccache` — этим занимается скрипт.
-- Если питание пропадёт внезапно, потери минимальны благодаря периодическому backup (таймер).
-- Оптимальный `-j` для i7‑12700KF с 64ГБ RAM: `-j16…18`.
+## Notes
+
+-   You do **not** need to add a tmpfs entry for `/mnt/ccache` in
+    `/etc/fstab` --- the script handles it.
+-   If power is lost unexpectedly, data loss is minimal thanks to
+    periodic backup (timer).
+-   Optimal `-j` for i7-12700KF with 64GB RAM: `-j16…18`.
