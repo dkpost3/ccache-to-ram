@@ -17,6 +17,89 @@ periodic timer.
 
 ------------------------------------------------------------------------
 
+## 🖥 System Requirements
+
+This setup reserves RAM permanently for tmpfs.\
+Make sure your system has enough memory for both:
+
+1.  AOSP build process
+2.  ccache tmpfs allocation
+
+------------------------------------------------------------------------
+
+### 📐 Engineering RAM Sizing Formula
+
+To size your system properly:
+
+    Total_RAM ≥ tmpfs_SIZE + build_peak + safety_margin
+
+Where:
+
+-   `tmpfs_SIZE` --- RAM allocated for ccache (e.g. 25G / 50G)
+-   `build_peak` --- peak RAM usage during AOSP build
+-   `safety_margin` --- recommended 20% of total RAM
+
+------------------------------------------------------------------------
+
+### Typical AOSP Build Peak Usage
+
+  Build Type                   -j   Peak RAM Usage
+  ---------------------------- ---- ----------------
+  Minimal tree                 12   18--24 GB
+  Full AOSP + GMS              16   24--36 GB
+  Full tree + heavy parallel   20   32--40 GB
+
+------------------------------------------------------------------------
+
+### Practical Examples
+
+#### Example 1 --- 25G tmpfs
+
+    25G (ccache)
+    + 30G (build peak)
+    + ~10G (safety margin)
+    = ~65G recommended total RAM
+
+→ **Recommended system RAM: 64 GB**
+
+------------------------------------------------------------------------
+
+#### Example 2 --- 50G tmpfs
+
+    50G (ccache)
+    + 35G (build peak)
+    + ~15G (safety margin)
+    = ~100G recommended total RAM
+
+→ **Recommended system RAM: 96--128 GB**
+
+------------------------------------------------------------------------
+
+### Recommended RAM by Configuration
+
+  tmpfs SIZE   Recommended Total RAM   Suitable For
+  ------------ ----------------------- ----------------------------
+  25G          64 GB                   Daily ROM builds
+  50G          96 GB                   Heavy parallel AOSP builds
+  64G          128 GB                  Dedicated build server
+
+------------------------------------------------------------------------
+
+### ⚠ Important Notes
+
+-   Do NOT allocate 50G tmpfs on a 32 GB system.
+-   Swapping completely destroys build performance.
+-   Monitor usage with:
+
+``` bash
+free -h
+htop
+```
+
+-   If system starts swapping → reduce `SIZE` immediately.
+
+------------------------------------------------------------------------
+
 ## 📂 Repository Structure
 
     ccache-to-ram/
@@ -42,34 +125,21 @@ periodic timer.
 # 📦 Installation
 
 ``` bash
-# 1) Clone repository
 git clone https://github.com/dkpost3/ccache-to-ram.git
 cd ccache-to-ram
 
-# 2) Install script
-# Option A (recommended): copy
 sudo install -m 0755 scripts/ccache-sync.sh /usr/local/bin/ccache-sync.sh
 
-# Option B (auto-update friendly): symlink
-# sudo ln -sf "$(pwd)/scripts/ccache-sync.sh" /usr/local/bin/ccache-sync.sh
-
-# 3) Create directories
 sudo mkdir -p /mnt/ccache
 mkdir -p ~/.ccache_backup
 
-# 4) Add environment variables
 cat profile_snippet.sh >> ~/.profile
-# Log out/in or:
-# source ~/.profile
 
-# 5) Install systemd units
 sudo install -m 0644 systemd/ccache-sync.service /etc/systemd/system/
 sudo install -m 0644 systemd/ccache-sync-backup.service /etc/systemd/system/
 sudo install -m 0644 systemd/ccache-sync.timer /etc/systemd/system/
 
 sudo systemctl daemon-reload
-
-# 6) Enable service and timer
 sudo systemctl enable --now ccache-sync.service
 sudo systemctl enable --now ccache-sync.timer
 ```
@@ -102,10 +172,7 @@ ccache -s
 ``` bash
 cd ccache-to-ram
 git pull --rebase
-
-# If installed via copy (Option A), reinstall script:
 sudo install -m 0755 scripts/ccache-sync.sh /usr/local/bin/ccache-sync.sh
-
 sudo systemctl restart ccache-sync.service
 ```
 
@@ -123,17 +190,6 @@ sudo rm -f /etc/systemd/system/ccache-sync*.timer
 
 sudo systemctl daemon-reload
 ```
-
-------------------------------------------------------------------------
-
-# 📝 Notes
-
--   No `/etc/fstab` entry is required --- mounting is handled by the
-    script.
--   In case of sudden power loss, data loss is minimized thanks to
-    periodic backups.
--   Recommended `-j` for i7‑12700KF with 64GB RAM: `-j16…18`.
--   Designed primarily for AOSP / Android ROM development environments.
 
 ------------------------------------------------------------------------
 
